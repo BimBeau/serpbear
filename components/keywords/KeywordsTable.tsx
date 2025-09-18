@@ -28,7 +28,7 @@ type KeywordsTableProps = {
 
 const KeywordsTable = (props: KeywordsTableProps) => {
    const titleColumnRef = useRef(null);
-   const { keywords = [], isLoading = true, isConsoleIntegrated = false, settings } = props;
+   const { domain: currentDomain, keywords = [], isLoading = true, isConsoleIntegrated = false, settings } = props;
    const showSCData = isConsoleIntegrated;
    const [device, setDevice] = useState<string>('desktop');
    const [selectedKeywords, setSelectedKeywords] = useState<number[]>([]);
@@ -310,7 +310,7 @@ const KeywordsTable = (props: KeywordsTableProps) => {
             <EditKeyword
                keyword={keywordToEdit}
                closeModal={() => setKeywordToEdit(null)}
-               domain={domain?.domain || ''}
+               domain={currentDomain?.domain ?? ''}
                availableTags={allDomainTags}
                allowsCity={!!activeScraper?.allowsCity}
                scraperName={activeScraper?.label || ''}
