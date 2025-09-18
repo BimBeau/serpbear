@@ -17,6 +17,7 @@ type KeywordProps = {
    removeKeyword: Function,
    selectKeyword: Function,
    manageTags: Function,
+   editKeyword: Function,
    showKeywordDetails: Function,
    lastItem?:boolean,
    showSCData: boolean,
@@ -36,6 +37,7 @@ const Keyword = (props: KeywordProps) => {
       selected,
       showKeywordDetails,
       manageTags,
+      editKeyword,
       lastItem,
       showSCData = true,
       style,
@@ -215,6 +217,11 @@ const Keyword = (props: KeywordProps) => {
                   </li>
                   <li><a className={optionsButtonStyle} onClick={() => { manageTags(); setShowOptions(false); }}>
                      <span className=' bg-green-100 text-green-500 px-1 rounded'><Icon type="tags" size={14} /></span> Add/Edit Tags</a>
+                  </li>
+                  <li>
+                     <a className={optionsButtonStyle} onClick={() => { editKeyword(); setShowOptions(false); }}>
+                        <span className=' bg-indigo-100 text-blue-700 px-1 rounded'><Icon type='edit' size={12} /></span> Edit Keyword
+                     </a>
                   </li>
                   <li><a className={optionsButtonStyle} onClick={() => { removeKeyword([ID]); setShowOptions(false); }}>
                      <span className=' bg-red-100 text-red-600 px-1 rounded'><Icon type="trash" size={14} /></span> Remove Keyword</a>

@@ -8,6 +8,7 @@ import parseKeywords from '../../utils/parseKeywords';
 import { integrateKeywordSCData, readLocalSCData } from '../../utils/searchConsole';
 import refreshAndUpdateKeywords from '../../utils/refresh';
 import { getKeywordsVolume, updateKeywordsVolumeData } from '../../utils/adwords';
+import countries from '../../utils/countries';
 
 type KeywordsGetResponse = {
    keywords?: KeywordType[],
@@ -147,39 +148,146 @@ const deleteKeywords = async (req: NextApiRequest, res: NextApiResponse<Keywords
    }
 };
 
+const allowedDevices = ['desktop', 'mobile'];
+
+const isValidUrl = (value: string) => {
+   if (!value) { return true; }
+   try {
+      const parsed = new URL(value);
+      return ['http:', 'https:'].includes(parsed.protocol);
+   } catch (err) {
+      return false;
+   }
+};
+
 const updateKeywords = async (req: NextApiRequest, res: NextApiResponse<KeywordsGetResponse>) => {
-   if (!req.query.id && typeof req.query.id !== 'string') {
+   if (!req.query.id || typeof req.query.id !== 'string') {
       return res.status(400).json({ error: 'keyword ID is Required!' });
    }
-   if (req.body.sticky === undefined && !req.body.tags === undefined) {
+
+   const keywordIDs = (req.query.id as string).split(',').map((item) => parseInt(item, 10));
+   const { sticky } = req.body;
+   const tagsPayload = req.body.tags;
+   const { keyword: newKeyword, url, country, city, device } = req.body;
+   const hasSingleKeywordUpdate = [newKeyword, url, country, city, device, Array.isArray(tagsPayload) ? tagsPayload : undefined]
+      .some((item) => item !== undefined);
+
+   if (sticky === undefined && tagsPayload === undefined && !hasSingleKeywordUpdate) {
       return res.status(400).json({ error: 'keyword Payload Missing!' });
    }
-   const keywordIDs = (req.query.id as string).split(',').map((item) => parseInt(item, 10));
-   const { sticky, tags } = req.body;
 
    try {
       let keywords: KeywordType[] = [];
       if (sticky !== undefined) {
+         if (typeof sticky !== 'boolean') {
+            return res.status(400).json({ error: 'Sticky should be a boolean value.' });
+         }
          await Keyword.update({ sticky }, { where: { ID: { [Op.in]: keywordIDs } } });
          const updateQuery = { where: { ID: { [Op.in]: keywordIDs } } };
          const updatedKeywords:Keyword[] = await Keyword.findAll(updateQuery);
          const formattedKeywords = updatedKeywords.map((el) => el.get({ plain: true }));
-          keywords = parseKeywords(formattedKeywords);
+         keywords = parseKeywords(formattedKeywords);
          return res.status(200).json({ keywords });
       }
-      if (tags) {
-         const tagsKeywordIDs = Object.keys(tags);
+
+      if (tagsPayload && typeof tagsPayload === 'object' && !Array.isArray(tagsPayload)) {
+         const tagsKeywordIDs = Object.keys(tagsPayload);
          const multipleKeywords = tagsKeywordIDs.length > 1;
          for (const keywordID of tagsKeywordIDs) {
             const selectedKeyword = await Keyword.findOne({ where: { ID: keywordID } });
             const currentTags = selectedKeyword && selectedKeyword.tags ? JSON.parse(selectedKeyword.tags) : [];
-            const mergedTags = Array.from(new Set([...currentTags, ...tags[keywordID]]));
+            const mergedTags = Array.from(new Set([...currentTags, ...tagsPayload[keywordID]]));
             if (selectedKeyword) {
-               await selectedKeyword.update({ tags: JSON.stringify(multipleKeywords ? mergedTags : tags[keywordID]) });
+               await selectedKeyword.update({ tags: JSON.stringify(multipleKeywords ? mergedTags : tagsPayload[keywordID]) });
             }
          }
          return res.status(200).json({ keywords });
       }
+
+      if (hasSingleKeywordUpdate) {
+         if (keywordIDs.length !== 1 || Number.isNaN(keywordIDs[0])) {
+            return res.status(400).json({ error: 'A single valid keyword ID is required to update keyword data.' });
+         }
+
+         const keywordID = keywordIDs[0];
+         const updatePayload: Record<string, string> = {};
+
+         if (newKeyword !== undefined) {
+            if (typeof newKeyword !== 'string' || !newKeyword.trim()) {
+               return res.status(400).json({ error: 'Keyword is required.' });
+            }
+            updatePayload.keyword = newKeyword.trim();
+         }
+
+         if (url !== undefined) {
+            if (typeof url !== 'string') {
+               return res.status(400).json({ error: 'URL should be a string.' });
+            }
+            const trimmedUrl = url.trim();
+            if (trimmedUrl && !isValidUrl(trimmedUrl)) {
+               return res.status(400).json({ error: 'Invalid URL provided.' });
+            }
+            updatePayload.url = trimmedUrl;
+         }
+
+         if (country !== undefined) {
+            if (typeof country !== 'string') {
+               return res.status(400).json({ error: 'Invalid country provided.' });
+            }
+            const sanitizedCountry = country.toUpperCase();
+            if (!countries[sanitizedCountry]) {
+               return res.status(400).json({ error: 'Invalid country provided.' });
+            }
+            updatePayload.country = sanitizedCountry;
+         }
+
+         if (city !== undefined) {
+            if (city !== null && typeof city !== 'string') {
+               return res.status(400).json({ error: 'Invalid city provided.' });
+            }
+            const trimmedCity = city ? city.trim() : '';
+            if (trimmedCity.length > 120) {
+               return res.status(400).json({ error: 'City should be 120 characters or fewer.' });
+            }
+            updatePayload.city = trimmedCity;
+         }
+
+         if (device !== undefined) {
+            if (typeof device !== 'string') {
+               return res.status(400).json({ error: 'Invalid device provided.' });
+            }
+            const sanitizedDevice = device.toLowerCase();
+            if (!allowedDevices.includes(sanitizedDevice)) {
+               return res.status(400).json({ error: 'Invalid device provided.' });
+            }
+            updatePayload.device = sanitizedDevice;
+         }
+
+         if (Array.isArray(tagsPayload)) {
+            const allValidTags = tagsPayload.every((tag) => typeof tag === 'string');
+            if (!allValidTags) {
+               return res.status(400).json({ error: 'Invalid tags payload.' });
+            }
+            const formattedTags = Array.from(new Set(tagsPayload.map((tag) => tag.trim()).filter((tag) => !!tag)));
+            updatePayload.tags = JSON.stringify(formattedTags);
+         }
+
+         if (Object.keys(updatePayload).length === 0) {
+            return res.status(400).json({ error: 'No valid fields provided to update.' });
+         }
+
+         updatePayload.lastUpdated = new Date().toJSON();
+
+         await Keyword.update(updatePayload, { where: { ID: keywordID } });
+         const updatedKeyword = await Keyword.findOne({ where: { ID: keywordID } });
+         if (!updatedKeyword) {
+            return res.status(404).json({ error: 'Keyword not found.' });
+         }
+         const formattedKeyword = updatedKeyword.get({ plain: true });
+         const [parsedKeyword] = parseKeywords([formattedKeyword]);
+         return res.status(200).json({ keywords: parsedKeyword ? [parsedKeyword] : [] });
+      }
+
       return res.status(400).json({ error: 'Invalid Payload!' });
    } catch (error) {
       console.log('[ERROR] Updating Keyword. ', error);

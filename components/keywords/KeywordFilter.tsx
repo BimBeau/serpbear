@@ -66,11 +66,9 @@ const KeywordFilters = (props: KeywordFilterProps) => {
       const optionObject:{label:string, value:string}[] = [];
 
       if (!isConsole) {
-         const allCountries = Array.from(keywords as KeywordType[])
-         .map((keyword) => keyword.country)
-         .reduce<string[]>((acc, country) => [...acc, country], [])
-         .filter((t) => t && t.trim() !== '');
-         [...new Set(allCountries)].forEach((c) => optionObject.push({ label: countries[c][0], value: c }));
+         Object.keys(countries).forEach((countryISO:string) => {
+            optionObject.push({ label: countries[countryISO][0], value: countryISO });
+         });
       } else {
          Object.keys(countries).forEach((countryISO:string) => {
             if ((SCcountries.includes(countryISO))) {
@@ -80,7 +78,7 @@ const KeywordFilters = (props: KeywordFilterProps) => {
       }
 
       return optionObject;
-   }, [SCcountries, isConsole, keywords]);
+   }, [SCcountries, isConsole]);
 
    const sortOptionChoices: SelectionOption[] = [
       { value: 'pos_asc', label: 'Top Position' },

@@ -14,6 +14,7 @@ const keywordProps = {
    removeKeyword: jest.fn(),
    selectKeyword: jest.fn(),
    manageTags: jest.fn(),
+   editKeyword: jest.fn(),
    showKeywordDetails: jest.fn(),
 };
 jest.mock('react-chartjs-2', () => ({

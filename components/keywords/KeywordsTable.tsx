@@ -10,6 +10,7 @@ import Modal from '../common/Modal';
 import { useDeleteKeywords, useFavKeywords, useRefreshKeywords } from '../../services/keywords';
 import KeywordTagManager from './KeywordTagManager';
 import AddTags from './AddTags';
+import EditKeyword from './EditKeyword';
 import useWindowResize from '../../hooks/useWindowResize';
 import useIsMobile from '../../hooks/useIsMobile';
 import { useUpdateSettings } from '../../services/settings';
@@ -35,6 +36,7 @@ const KeywordsTable = (props: KeywordsTableProps) => {
    const [showRemoveModal, setShowRemoveModal] = useState<boolean>(false);
    const [showTagManager, setShowTagManager] = useState<null|number>(null);
    const [showAddTags, setShowAddTags] = useState<boolean>(false);
+   const [keywordToEdit, setKeywordToEdit] = useState<KeywordType | null>(null);
    const [SCListHeight, setSCListHeight] = useState(500);
    const [filterParams, setFilterParams] = useState<KeywordFilters>({ countries: [], tags: [], search: '' });
    const [sortBy, setSortBy] = useState<string>('date_asc');
@@ -60,6 +62,12 @@ const KeywordsTable = (props: KeywordsTableProps) => {
    }, [titleColumnRef]);
 
    const tableColumns = settings?.keywordsColumns || ['Best', 'History', 'Volume', 'Search Console'];
+   const activeScraper = useMemo(() => {
+      if (!settings?.scraper_type || !settings?.available_scapers) {
+         return null;
+      }
+      return settings.available_scapers.find((scraper) => scraper.value === settings.scraper_type) || null;
+   }, [settings?.scraper_type, settings?.available_scapers]);
    const { mutate: updateMutate, isLoading: isUpdatingSettings } = useUpdateSettings(() => console.log(''));
 
    const scDataObject:{ [k:string] : string} = {
@@ -114,6 +122,7 @@ const KeywordsTable = (props: KeywordsTableProps) => {
          refreshkeyword={() => refreshMutate({ ids: [keyword.ID] })}
          favoriteKeyword={favoriteMutate}
          manageTags={() => setShowTagManager(keyword.ID)}
+         editKeyword={() => setKeywordToEdit(keyword)}
          removeKeyword={() => { setSelectedKeywords([keyword.ID]); setShowRemoveModal(true); }}
          showKeywordDetails={() => setShowKeyDetails(keyword)}
          lastItem={index === (processedKeywords[device].length - 1)}
@@ -297,8 +306,18 @@ const KeywordsTable = (props: KeywordsTableProps) => {
                />
          )}
          <Toaster position='bottom-center' containerClassName="react_toaster" />
+         {keywordToEdit && (
+            <EditKeyword
+               keyword={keywordToEdit}
+               closeModal={() => setKeywordToEdit(null)}
+               domain={domain?.domain || ''}
+               availableTags={allDomainTags}
+               allowsCity={!!activeScraper?.allowsCity}
+               scraperName={activeScraper?.label || ''}
+            />
+         )}
       </div>
    );
- };
+};
 
  export default KeywordsTable;

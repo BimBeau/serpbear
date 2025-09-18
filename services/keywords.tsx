@@ -63,6 +63,39 @@ export function useAddKeywords(onSuccess:Function) {
    });
 }
 
+export function useEditKeyword(domain: string, onSuccess:Function) {
+   const queryClient = useQueryClient();
+   return useMutation(async ({ keywordID, payload }: {keywordID:number, payload: KeywordUpdatePayload}) => {
+      const headers = new Headers({ 'Content-Type': 'application/json', Accept: 'application/json' });
+      const fetchOpts = { method: 'PUT', headers, body: JSON.stringify(payload) };
+      const res = await fetch(`${window.location.origin}/api/keywords?id=${keywordID}`, fetchOpts);
+      let data;
+      try {
+         data = await res.json();
+      } catch (error) {
+         data = {};
+      }
+      if (!res.ok) {
+         const errorMessage = data?.error || 'Error Updating Keyword';
+         throw new Error(errorMessage);
+      }
+      return data;
+   }, {
+      onSuccess: async () => {
+         onSuccess();
+         toast('Keyword Updated Successfully!', { icon: '✔️' });
+         queryClient.invalidateQueries(['keywords']);
+         if (domain) {
+            queryClient.invalidateQueries(['keywords', domain]);
+         }
+      },
+      onError: (error:Error) => {
+         console.log('Error Updating Keyword!!!', error);
+         toast(error.message || 'Error Updating Keyword.', { icon: '⚠️' });
+      },
+   });
+}
+
 export function useDeleteKeywords(onSuccess:Function) {
    const queryClient = useQueryClient();
    return useMutation(async (keywordIDs:number[]) => {
