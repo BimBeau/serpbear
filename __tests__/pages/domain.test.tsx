@@ -5,7 +5,7 @@ import { useAddDomain, useDeleteDomain, useFetchDomains, useUpdateDomain } from 
 import { useAddKeywords, useDeleteKeywords,
    useFavKeywords, useFetchKeywords, useRefreshKeywords, useFetchSingleKeyword } from '../../services/keywords';
 import { dummyDomain, dummyKeywords, dummySettings } from '../../__mocks__/data';
-import { useFetchSettings } from '../../services/settings';
+import { useFetchSettings, useUpdateSettings } from '../../services/settings';
 
 jest.mock('../../services/domains');
 jest.mock('../../services/keywords');
@@ -31,6 +31,7 @@ const useAddKeywordsFunc = useAddKeywords as jest.Mock<any>;
 const useUpdateDomainFunc = useUpdateDomain as jest.Mock<any>;
 const useDeleteDomainFunc = useDeleteDomain as jest.Mock<any>;
 const useFetchSettingsFunc = useFetchSettings as jest.Mock<any>;
+const useUpdateSettingsFunc = useUpdateSettings as jest.Mock<any>;
 const useFetchSingleKeywordFunc = useFetchSingleKeyword as jest.Mock<any>;
 
 describe('SingleDomain Page', () => {
@@ -48,6 +49,7 @@ describe('SingleDomain Page', () => {
       useAddKeywordsFunc.mockImplementation(() => ({ mutate: () => { } }));
       useUpdateDomainFunc.mockImplementation(() => ({ mutate: () => { } }));
       useDeleteDomainFunc.mockImplementation(() => ({ mutate: () => { } }));
+      useUpdateSettingsFunc.mockImplementation(() => ({ mutate: () => { }, isLoading: false }));
    });
    afterEach(() => {
       jest.clearAllMocks();

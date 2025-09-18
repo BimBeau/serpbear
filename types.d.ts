@@ -134,6 +134,15 @@ type KeywordAddPayload = {
    city?:string
 }
 
+type KeywordUpdatePayload = {
+   keyword?: string,
+   url?: string,
+   country?: string,
+   city?: string,
+   device?: string,
+   tags?: string[],
+}
+
 type SearchAnalyticsRawItem = {
    keys: string[],
    clicks: number,
